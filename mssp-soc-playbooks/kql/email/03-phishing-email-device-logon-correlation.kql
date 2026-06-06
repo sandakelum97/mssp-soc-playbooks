@@ -1,0 +1,18 @@
+// Title:   Phishing email + device logon correlation
+// Purpose: Correlates malicious email delivery with subsequent device logon
+//          within 30 minutes. Confirms whether a lure led to credential use
+//          on an endpoint.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  EmailEvents, IdentityLogonEvents
+// MITRE:   T1566 - Phishing, T1078 - Valid Accounts
+
+let MaliciousEmails = EmailEvents
+| where ThreatTypes has "Malware"
+| project TimeEmail = Timestamp, Subject, SenderFromAddress,
+          AccountName = tostring(split(RecipientEmailAddress, "@")[0]);
+MaliciousEmails
+| join (
+    IdentityLogonEvents
+    | project LogonTime = Timestamp, AccountName, DeviceName
+  ) on AccountName
+| where (LogonTime - TimeEmail) between (0min .. 30min)

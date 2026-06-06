@@ -1,0 +1,13 @@
+// Title:   URL click tracking - AiTM / phishing link check
+// Purpose: Identifies any user who clicked the attacker URL and whether they
+//          completed the click-through. Critical for scoping credential theft risk.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  UrlClickEvents
+// MITRE:   T1566.002 - Phishing: Spearphishing Link
+
+UrlClickEvents
+| where Timestamp > ago(30d)
+| where Url has "attacker-domain.com"  // <-- replace with IOC domain
+| project Timestamp, Url, AccountUpn, ActionType,
+          IPAddress, IsClickedThrough,
+          NetworkMessageId, UrlChain

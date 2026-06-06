@@ -1,0 +1,17 @@
+// Title:   Targeted sign-in forensics - single user + time window
+// Purpose: Detailed sign-in audit for one user after a suspected phishing lure.
+//          Checks risk level, CA policy status, device and location metadata.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  SigninLogs
+// MITRE:   T1078.004 - Cloud Accounts
+
+SigninLogs
+| where TimeGenerated between (
+    datetime(YYYY-MM-DDTHH:MM:SSZ) .. now()  // <-- adjust start time
+  )
+| where UserPrincipalName =~ "user@clientdomain.com"  // <-- replace
+| project TimeGenerated, IPAddress, Location,
+          AppDisplayName, ConditionalAccessStatus,
+          RiskLevelDuringSignIn, RiskLevelAggregated,
+          AuthenticationDetails, DeviceDetail
+| order by TimeGenerated desc

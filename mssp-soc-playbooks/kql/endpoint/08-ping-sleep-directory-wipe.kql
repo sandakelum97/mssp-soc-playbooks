@@ -1,0 +1,14 @@
+// Title:   Ping-sleep sandbox evasion + silent directory wipe
+// Purpose: Catches malware self-cleanup chains: ping-based sleep evasion
+//          followed by silent recursive directory deletion (rd /s /q).
+//          Common in RAT droppers and stagers.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1497.003 - Time Based Evasion, T1070.004 - File Deletion
+
+DeviceProcessEvents
+| where FileName =~ "cmd.exe"
+| where ProcessCommandLine has "ping 127.0.0.1"
+    and ProcessCommandLine has "rd /s /q"
+| project Timestamp, DeviceName, AccountName,
+          ProcessCommandLine

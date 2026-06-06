@@ -1,0 +1,12 @@
+// Title:   CrowdStrike LogScale - non-standard extension DLL hunt
+// Purpose: Hunts for rundll32 loading payloads with non-DLL extensions across
+//          all managed endpoints in Falcon. Targets RAT payload staging patterns.
+// Env:     CrowdStrike Falcon - LogScale / Advanced Event Search
+// MITRE:   T1218.011 - Rundll32, T1036.007 - Masquerading
+
+#event_simpleName=ProcessRollup2
+| FileName="rundll32.exe"
+| CommandLine=/\.rfg|\.dat|\.cfg/i
+| CommandLine!=/Windows\\System32|Windows\\SysWOW64/i
+| table([@timestamp, ComputerName, UserName,
+         CommandLine, ParentBaseFileName])

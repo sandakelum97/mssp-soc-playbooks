@@ -1,0 +1,20 @@
+// Title:   Inbound email matching phishing campaign
+// Purpose: Finds delivered emails matching known sender addresses, domains,
+//          or subject lines. Scope a phishing or quishing campaign across tenants.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  EmailEvents
+// MITRE:   T1566.001 - Spearphishing Attachment, T1566.002 - Spearphishing Link
+
+EmailEvents
+| where Timestamp > ago(30d)
+| where SenderFromAddress =~ "sender@attacker-domain.com"     // <-- replace
+   or SenderMailFromAddress =~ "sender@attacker-domain.com"   // <-- replace
+   or Subject has_any (
+       "Keyword One",    // <-- replace with lure subject line keywords
+       "Keyword Two",
+       "Ref. XXXXXXX"
+     )
+| project Timestamp, NetworkMessageId, SenderFromAddress,
+          RecipientEmailAddress, Subject, DeliveryAction,
+          DeliveryLocation, ThreatTypes, AttachmentCount, UrlCount
+| order by Timestamp desc

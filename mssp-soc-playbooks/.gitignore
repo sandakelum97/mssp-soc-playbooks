@@ -1,0 +1,29 @@
+# Environment and secrets
+*.env
+.env.*
+config.local.*
+secrets.*
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Any accidentally included exports
+*.csv
+*.xlsx
+*.json
+
+# Temp files
+tmp/
+temp/

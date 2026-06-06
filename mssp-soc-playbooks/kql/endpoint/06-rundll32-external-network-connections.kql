@@ -1,0 +1,13 @@
+// Title:   rundll32.exe making external network connections
+// Purpose: Identifies rundll32 connecting to non-private IPs - indicative of
+//          C2 callback or payload staging via process injection.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceNetworkEvents
+// MITRE:   T1218.011 - Rundll32, T1071.001 - Web Protocols
+
+DeviceNetworkEvents
+| where InitiatingProcessFileName =~ "rundll32.exe"
+| where RemoteIPType != "Private"
+| project Timestamp, DeviceName, AccountName,
+          RemoteIP, RemoteUrl, InitiatingProcessCommandLine
+| order by Timestamp desc

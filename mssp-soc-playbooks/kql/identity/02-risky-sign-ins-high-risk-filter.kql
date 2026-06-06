@@ -1,0 +1,20 @@
+// Title:   Risky sign-ins for specific users (high-risk filter)
+// Purpose: Pull interactive sign-in events for named users filtered to high
+//          risk level. Useful for AiTM investigation initial scoping.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  SigninLogs
+// MITRE:   T1078.004 - Cloud Accounts
+
+SigninLogs
+| where TimeGenerated > ago(7d)
+| where UserDisplayName in (
+    "User One",          // <-- replace
+    "User Two",          // <-- replace
+    "User Three"         // <-- replace
+  )
+| where RiskLevelDuringSignIn == "high"
+    or isnotempty(RiskEventTypes_V2)
+| project TimeGenerated, UserDisplayName, IPAddress,
+          AppDisplayName, UserAgent, ConditionalAccessStatus,
+          RiskLevelDuringSignIn, RiskLevelAggregated
+| order by TimeGenerated desc

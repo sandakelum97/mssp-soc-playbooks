@@ -1,0 +1,16 @@
+// Title:   Repeated POST to Microsoft auth endpoints (C2 blending)
+// Purpose: Detects malware C2 traffic blending into legitimate Microsoft
+//          authentication infrastructure via high-frequency POST requests
+//          from unexpected processes.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceNetworkEvents
+// MITRE:   T1071.001 - Application Layer Protocol: Web Protocols
+
+DeviceNetworkEvents
+| where RemoteUrl has "login.live.com/RST2.srf"  // <-- adjust if needed
+| where InitiatingProcessFileName !in~ (
+    "svchost.exe", "lsass.exe", "MicrosoftEdge.exe"
+  )
+| summarize Count = count()
+        by DeviceName, InitiatingProcessFileName, bin(Timestamp, 5m)
+| where Count >= 3

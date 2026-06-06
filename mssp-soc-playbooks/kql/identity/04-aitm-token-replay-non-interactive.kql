@@ -1,0 +1,20 @@
+// Title:   AiTM token replay - non-interactive sign-in detection
+// Purpose: Detects stolen session token usage via non-interactive sign-ins.
+//          AiTM post-compromise pattern where attacker replays tokens
+//          from a different IP without triggering MFA.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  AADNonInteractiveUserSignInLogs
+// MITRE:   T1550.001 - Use Alternate Authentication Material: Application Access Token
+
+AADNonInteractiveUserSignInLogs
+| where TimeGenerated > ago(7d)
+| where UserDisplayName in (
+    "User One",   // <-- replace
+    "User Two",   // <-- replace
+    "User Three"  // <-- replace
+  )
+| where ResultType == 0
+| project TimeGenerated, UserDisplayName, IPAddress,
+          AppDisplayName, ResourceDisplayName,
+          UserAgent, AuthenticationProtocol, OriginalRequestId
+| order by UserDisplayName, TimeGenerated asc

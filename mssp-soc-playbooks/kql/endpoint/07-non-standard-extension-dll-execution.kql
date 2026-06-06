@@ -1,0 +1,14 @@
+// Title:   Non-standard extension DLL execution (RAT staging)
+// Purpose: Detects rundll32 loading files with non-DLL extensions (.rfg, .dat,
+//          .cfg, .tmp) - used by RATs to masquerade payloads as non-executable
+//          files and evade extension-based detection.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1218.011 - Rundll32, T1036.007 - Masquerading: Double File Extension
+
+DeviceProcessEvents
+| where FileName =~ "rundll32.exe"
+| where ProcessCommandLine matches regex @"\.(rfg|dat|cfg|tmp|log|txt)[\"",]"
+| where FolderPath !has @"C:\Windows"
+| project Timestamp, DeviceName, AccountName,
+          ProcessCommandLine, InitiatingProcessFileName

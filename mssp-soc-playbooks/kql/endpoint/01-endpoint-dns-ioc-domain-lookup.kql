@@ -1,0 +1,14 @@
+// Title:   Endpoint DNS - IOC domain lookup across MDE fleet
+// Purpose: Hunts all MDE-enrolled endpoints for DNS requests to a known
+//          malicious domain or URL pattern. Complements email and URL click
+//          data for full campaign blast radius assessment.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceNetworkEvents
+// MITRE:   T1071.001 - Application Layer Protocol: Web Protocols
+
+DeviceNetworkEvents
+| where Timestamp > ago(30d)
+| where RemoteUrl has "attacker-domain.com"      // <-- replace
+   or RemoteUrl has "secondary-ioc-pattern"      // <-- replace or remove
+| project Timestamp, DeviceName, InitiatingProcessFileName,
+          RemoteUrl, RemoteIP, ActionType

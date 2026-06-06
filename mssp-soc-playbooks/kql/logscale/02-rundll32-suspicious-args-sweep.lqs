@@ -1,0 +1,11 @@
+// Title:   CrowdStrike LogScale - suspicious rundll32 arguments
+// Purpose: Flags rundll32 with JavaScript, MSHTML, or remote URL arguments.
+//          Broadest LotL detection sweep across the Falcon fleet.
+// Env:     CrowdStrike Falcon - LogScale / Advanced Event Search
+// MITRE:   T1218.011 - System Binary Proxy Execution: Rundll32
+
+#event_simpleName=ProcessRollup2
+| FileName="rundll32.exe"
+| CommandLine=/javascript:|mshtml|RunHTMLApplication|\.sct|\.hta/i
+| table([@timestamp, ComputerName, UserName,
+         CommandLine, ParentBaseFileName])

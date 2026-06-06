@@ -1,0 +1,16 @@
+// Title:   rundll32.exe running from non-standard path
+// Purpose: Flags rundll32 executing outside System32/SysWOW64. Common staging
+//          tactic when malware drops a copy to a user-writable directory.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1218.011 - System Binary Proxy Execution: Rundll32
+
+DeviceProcessEvents
+| where FileName =~ "rundll32.exe"
+| where not(FolderPath has_any (
+    @"C:\Windows\System32",
+    @"C:\Windows\SysWOW64"
+  ))
+| project Timestamp, DeviceName, AccountName,
+          FolderPath, ProcessCommandLine
+| order by Timestamp desc

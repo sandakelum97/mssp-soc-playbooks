@@ -1,0 +1,20 @@
+// Title:   Phishing email delivery check before sign-in events
+// Purpose: Confirms whether a phishing email was delivered to victim accounts
+//          before anomalous sign-ins. Establishes the initial access timeline.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  EmailEvents
+// MITRE:   T1566.002 - Phishing: Spearphishing Link
+
+let victims = dynamic([
+    "user1@clientdomain.com",  // <-- replace
+    "user2@clientdomain.com",  // <-- replace
+    "user3@clientdomain.com"   // <-- replace
+]);
+EmailEvents
+| where Timestamp between (
+    datetime(YYYY-MM-DD) .. datetime(YYYY-MM-DD)  // <-- adjust window
+  )
+| where RecipientEmailAddress in (victims)
+| where DeliveryAction in ("Delivered", "DeliveredAsSpam")
+| project Timestamp, RecipientEmailAddress, SenderFromAddress,
+          Subject, DeliveryAction, ThreatTypes, NetworkMessageId

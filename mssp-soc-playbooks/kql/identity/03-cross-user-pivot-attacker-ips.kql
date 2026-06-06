@@ -1,0 +1,27 @@
+// Title:   Cross-user pivot on attacker IPs (lateral spread check)
+// Purpose: Finds other users signing in from IPs used by confirmed risky users.
+//          Uncovers victims who haven't yet crossed the risk threshold.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  SigninLogs
+// MITRE:   T1078.004 - Cloud Accounts
+
+let badIPs =
+    SigninLogs
+    | where TimeGenerated between (
+        datetime(YYYY-MM-DD) .. datetime(YYYY-MM-DD)  // <-- adjust
+      )
+    | where UserDisplayName in (
+        "User One", "User Two", "User Three"           // <-- replace
+      )
+    | where RiskLevelDuringSignIn == "high"
+        or isnotempty(RiskEventTypes_V2)
+    | distinct IPAddress;
+SigninLogs
+| where TimeGenerated > ago(7d)
+| where IPAddress in (badIPs)
+| summarize SignInCount = count(),
+            Successes   = countif(ResultType == 0),
+            FirstSeen   = min(TimeGenerated),
+            LastSeen    = max(TimeGenerated)
+        by UserPrincipalName, IPAddress, AppDisplayName, UserAgent
+| order by Successes desc

@@ -1,0 +1,18 @@
+// Title:   rundll32.exe with suspicious arguments
+// Purpose: Detects rundll32 used for JavaScript/MSHTML/URL proxy execution.
+//          Classic Living off the Land technique used by loaders, RATs,
+//          and post-exploitation frameworks.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1218.011 - System Binary Proxy Execution: Rundll32
+
+DeviceProcessEvents
+| where FileName =~ "rundll32.exe"
+| where ProcessCommandLine has_any (
+    "javascript", "mshtml", "RunHTMLApplication",
+    "http://", "https://", ".sct", ".hta", "vbscript"
+  )
+| project Timestamp, DeviceName, AccountName,
+          ProcessCommandLine, InitiatingProcessFileName,
+          InitiatingProcessCommandLine
+| order by Timestamp desc

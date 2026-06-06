@@ -1,0 +1,17 @@
+// Title:   Last device logon - specific device name
+// Purpose: Identifies who last logged into a device by hostname. Used for
+//          device-ownership verification and session attribution during
+//          endpoint investigations.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceLogonEvents
+// MITRE:   T1078 - Valid Accounts
+
+DeviceLogonEvents
+| where DeviceName =~ "DEVICE-HOSTNAME"  // <-- replace
+| where LogonType in (
+    "Interactive", "RemoteInteractive", "Unlock"
+  )
+| project Timestamp, DeviceName, AccountName,
+          AccountDomain, LogonType, RemoteIP
+| order by Timestamp desc
+| take 10

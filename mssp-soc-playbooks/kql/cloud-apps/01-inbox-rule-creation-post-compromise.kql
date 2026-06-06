@@ -1,0 +1,20 @@
+// Title:   Inbox rule creation post-compromise (BEC check)
+// Purpose: Detects attacker-created inbox rules after AiTM sign-in.
+//          Covers auto-forwarding, auto-delete, and hide-in-folder rules.
+//          Core forensic step in any BEC or AiTM investigation.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  CloudAppEvents
+// MITRE:   T1114.003 - Email Collection: Email Forwarding Rule
+
+CloudAppEvents
+| where Timestamp > ago(7d)
+| where ActionType in (
+    "New-InboxRule", "Set-InboxRule", "UpdateInboxRules"
+  )
+| where AccountDisplayName in (
+    "User One",   // <-- replace
+    "User Two",   // <-- replace
+    "User Three"  // <-- replace
+  )
+| project Timestamp, AccountDisplayName, IPAddress,
+          ActionType, RawEventData

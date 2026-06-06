@@ -1,0 +1,17 @@
+// Title:   Risky user account status lookup (multi-tenant)
+// Purpose: Look up risky user display names or UPNs in IdentityInfo.
+//          Returns enabled status, UPN, and Object ID.
+//          Useful for bulk triage across managed tenants.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  IdentityInfo
+// MITRE:   T1078 - Valid Accounts
+
+let riskyUserNames = dynamic([
+    "First Last",        // <-- replace with actual display names
+    "First Last 2"
+]);
+IdentityInfo
+| where AccountDisplayName in~ (riskyUserNames)
+| take_any(*) by AccountObjectId
+| project AccountDisplayName, AccountUpn,
+          IsAccountEnabled, AccountObjectId

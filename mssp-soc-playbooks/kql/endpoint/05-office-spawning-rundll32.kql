@@ -1,0 +1,16 @@
+// Title:   Office application spawning rundll32
+// Purpose: Detects an Office app launching rundll32 as a child process.
+//          Very high signal for macro abuse, exploit, or malicious document execution.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1218.011 - Rundll32, T1566.001 - Spearphishing Attachment
+
+DeviceProcessEvents
+| where FileName =~ "rundll32.exe"
+| where InitiatingProcessFileName in~ (
+    "winword.exe", "excel.exe", "outlook.exe",
+    "powerpnt.exe", "onenote.exe", "msaccess.exe"
+  )
+| project Timestamp, DeviceName, AccountName,
+          InitiatingProcessFileName, ProcessCommandLine
+| order by Timestamp desc

@@ -1,0 +1,16 @@
+// Title:   Graph API activity correlation with service principal sign-ins
+// Purpose: Joins MicrosoftGraphActivityLogs with AADServicePrincipalSignInLogs
+//          to correlate suspicious API calls with the sign-in that initiated them.
+//          NOTE: UniqueTokenIdentifier is the correct join key (not CorrelationId).
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  MicrosoftGraphActivityLogs, AADServicePrincipalSignInLogs
+// MITRE:   T1550.001 - Application Access Token
+
+MicrosoftGraphActivityLogs
+| where TimeGenerated > ago(1d)
+| join (
+    AADServicePrincipalSignInLogs
+    | where TimeGenerated > ago(1d)
+  ) on $left.SignInActivityId == $right.UniqueTokenIdentifier
+| project TimeGenerated, ServicePrincipalName, RequestUri,
+          RequestMethod, ResponseStatusCode, IPAddress

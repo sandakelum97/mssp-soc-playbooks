@@ -1,0 +1,15 @@
+// Title:   slui.exe UAC bypass detection
+// Purpose: Detects the slui.exe -Embedding UAC bypass - used to gain elevated
+//          privileges without triggering a user-visible UAC prompt.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1548.002 - Bypass User Account Control
+
+DeviceProcessEvents
+| where FileName =~ "slui.exe"
+| where ProcessCommandLine has "-Embedding"
+| where InitiatingProcessFileName !in~ (
+    "svchost.exe", "services.exe"
+  )
+| project Timestamp, DeviceName, AccountName,
+          InitiatingProcessFileName, ProcessCommandLine

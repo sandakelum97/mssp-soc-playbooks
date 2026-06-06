@@ -1,0 +1,20 @@
+// Title:   Inbox rule creation - single user via UPN lookup
+// Purpose: Scoped inbox rule check for one user. Resolves AccountObjectId via
+//          IdentityInfo before filtering CloudAppEvents. More precise than
+//          display name matching - avoids false positives on name collisions.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  CloudAppEvents, IdentityInfo
+// MITRE:   T1114.003 - Email Collection: Email Forwarding Rule
+
+CloudAppEvents
+| where Timestamp >= datetime(YYYY-MM-DDTHH:MM:SSZ)  // <-- adjust
+| where ActionType in (
+    "New-InboxRule", "Set-InboxRule", "UpdateInboxRules"
+  )
+| where AccountObjectId in (
+    (IdentityInfo
+     | where AccountUpn =~ "user@clientdomain.com"  // <-- replace
+     | project AccountObjectId)
+  )
+| project Timestamp, ActionType, RawEventData,
+          AccountDisplayName, IPAddress
