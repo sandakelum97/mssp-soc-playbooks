@@ -6,13 +6,16 @@
 // Tables:  EmailEvents, IdentityLogonEvents
 // MITRE:   T1566 - Phishing, T1078 - Valid Accounts
 
+let lookback = 7d;  // <-- adjust
 let MaliciousEmails = EmailEvents
+| where Timestamp > ago(lookback)
 | where ThreatTypes has "Malware"
 | project TimeEmail = Timestamp, Subject, SenderFromAddress,
           AccountName = tostring(split(RecipientEmailAddress, "@")[0]);
 MaliciousEmails
 | join (
     IdentityLogonEvents
+    | where Timestamp > ago(lookback)
     | project LogonTime = Timestamp, AccountName, DeviceName
   ) on AccountName
 | where (LogonTime - TimeEmail) between (0min .. 30min)

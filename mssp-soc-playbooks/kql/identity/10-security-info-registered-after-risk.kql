@@ -1,0 +1,31 @@
+// Title:   MFA / security info registered shortly after a risk detection
+// Purpose: Attackers who steal a session often register their own MFA method
+//          for persistence. Finds security-info registrations within N hours
+//          after an Entra ID Protection risk detection for the same user.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  AuditLogs, AADUserRiskEvents
+// MITRE:   T1556.006 - Modify Authentication Process: Multi-Factor Authentication
+// Ref:     https://learn.microsoft.com/security/operations/token-theft-playbook
+
+let lookback = 7d;   // <-- adjust
+let window   = 24h;  // <-- adjust: max gap between risk and registration
+let risk = AADUserRiskEvents
+| where TimeGenerated > ago(lookback)
+| project RiskTime = ActivityDateTime, UPN = tolower(UserPrincipalName),
+          RiskEventType, RiskLevel, RiskIP = IpAddress;
+AuditLogs
+| where TimeGenerated > ago(lookback)
+| where OperationName in (
+    "User registered security info", "User changed default security info",
+    "Admin registered security info", "User registered all required security info"
+  )
+| extend UPN     = tolower(tostring(TargetResources[0].userPrincipalName)),
+         ActorIP = tostring(InitiatedBy.user.ipAddress)
+| project RegTime = TimeGenerated, UPN, OperationName, ResultReason,
+          AdditionalDetails, ActorIP, Result  // method details are in AdditionalDetails
+| join kind=inner risk on UPN
+| where RegTime between (RiskTime .. (RiskTime + window))
+| project RiskTime, RegTime, UPN, RiskEventType, RiskLevel, RiskIP,
+          OperationName, ResultReason, AdditionalDetails,
+          ActorIP, SameIP = (RiskIP == ActorIP)
+| order by RegTime desc

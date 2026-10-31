@@ -1,0 +1,36 @@
+// Title:   Ransomware pre-encryption indicators (recovery inhibition)
+// Purpose: Groups commands that human-operated ransomware runs before
+//          encryption - deleting shadow copies and backups, disabling boot
+//          recovery, deleting the USN journal, clearing event logs - and
+//          flags devices showing several distinct techniques within one hour.
+//          Logic adapted from Microsoft's advanced hunting ransomware guidance.
+//          Treat any hit as urgent: isolate the device and check for lateral
+//          movement from the same account.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  DeviceProcessEvents
+// MITRE:   T1490 - Inhibit System Recovery, T1070.001 - Clear Windows Event Logs
+// Ref:     https://learn.microsoft.com/defender-xdr/advanced-hunting-find-ransomware
+
+DeviceProcessEvents
+| where Timestamp > ago(7d)  // <-- adjust
+| extend Technique = case(
+    FileName =~ "vssadmin.exe" and ProcessCommandLine has_any ("delete shadows", "resize shadowstorage"), "VSS shadow copy deletion",
+    FileName =~ "wmic.exe" and ProcessCommandLine has "shadowcopy" and ProcessCommandLine has "delete", "WMIC shadow copy deletion",
+    ProcessCommandLine has "Win32_ShadowCopy" and ProcessCommandLine has_any ("Delete", "Remove-"), "PowerShell shadow copy deletion",
+    FileName =~ "wbadmin.exe" and ProcessCommandLine has "delete" and ProcessCommandLine has_any ("backup", "catalog", "systemstatebackup"), "Backup catalog deletion",
+    FileName =~ "bcdedit.exe" and ProcessCommandLine has_any ("recoveryenabled no", "bootstatuspolicy ignoreallfailures"), "Boot recovery disabled",
+    FileName =~ "fsutil.exe" and ProcessCommandLine has "usn" and ProcessCommandLine has "deletejournal", "USN journal deletion",
+    FileName =~ "wevtutil.exe" and ProcessCommandLine has_any (" cl ", " clear-log "), "Event log cleared",
+    "")
+| where isnotempty(Technique)
+| summarize Techniques     = make_set(Technique),
+            TechniqueCount = dcount(Technique),
+            Commands       = make_set(ProcessCommandLine, 20),
+            Accounts       = make_set(AccountName, 10),
+            Parents        = make_set(InitiatingProcessFileName, 10),
+            FirstSeen      = min(Timestamp)
+        by DeviceId, DeviceName, bin(Timestamp, 1h)
+| extend Priority = iff(TechniqueCount >= 2, "High - multiple techniques", "Review")
+| project FirstSeen, DeviceName, DeviceId, Priority, TechniqueCount,
+          Techniques, Accounts, Parents, Commands
+| order by TechniqueCount desc, FirstSeen desc

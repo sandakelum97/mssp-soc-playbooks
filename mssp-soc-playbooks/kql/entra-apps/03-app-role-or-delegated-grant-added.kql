@@ -1,0 +1,31 @@
+// Title:   App role assignment / delegated permission grant added
+// Purpose: Surfaces new application permissions (app roles) and tenant-wide
+//          delegated grants. Microsoft's Entra security operations guidance
+//          recommends high-severity alerting when the target is a sensitive
+//          API such as Microsoft Graph or Exchange Online.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  AuditLogs
+// MITRE:   T1098.003 - Account Manipulation: Additional Cloud Roles
+// Ref:     https://learn.microsoft.com/entra/architecture/security-operations-applications
+
+AuditLogs
+| where TimeGenerated > ago(14d)  // <-- adjust
+| where OperationName in (
+    "Add app role assignment to service principal",
+    "Add delegated permission grant"
+  )
+| extend Actor   = coalesce(tostring(InitiatedBy.user.userPrincipalName),
+                            tostring(InitiatedBy.app.displayName)),
+         ActorIP = tostring(InitiatedBy.user.ipAddress)
+| mv-apply tr = TargetResources on (
+    mv-apply mp = tr.modifiedProperties on (
+        summarize Props = make_bag(bag_pack(tostring(mp.displayName), tostring(mp.newValue)))
+    )
+    | summarize Props = make_bag(Props), Targets = make_set(tostring(tr.displayName))
+  )
+| extend AppRole     = tostring(Props["AppRole.Value"]),
+         Scope       = tostring(Props["DelegatedPermissionGrant.Scope"]),
+         ConsentType = tostring(Props["DelegatedPermissionGrant.ConsentType"])
+| project TimeGenerated, OperationName, Actor, ActorIP, Targets,
+          AppRole, Scope, ConsentType, Result
+| order by TimeGenerated desc

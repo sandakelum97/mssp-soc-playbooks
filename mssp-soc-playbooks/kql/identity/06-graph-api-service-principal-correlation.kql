@@ -8,9 +8,15 @@
 
 MicrosoftGraphActivityLogs
 | where TimeGenerated > ago(1d)
-| join (
+| join kind=inner (
     AADServicePrincipalSignInLogs
     | where TimeGenerated > ago(1d)
+    | project SignInTime = TimeGenerated, UniqueTokenIdentifier,
+              ServicePrincipalName, ServicePrincipalId,
+              SignInIP = IPAddress, ResultType
   ) on $left.SignInActivityId == $right.UniqueTokenIdentifier
-| project TimeGenerated, ServicePrincipalName, RequestUri,
-          RequestMethod, ResponseStatusCode, IPAddress
+| project TimeGenerated, SignInTime, ServicePrincipalName, RequestUri,
+          RequestMethod, ResponseStatusCode,
+          GraphCallIP = IPAddress, SignInIP
+// Note: Graph calls made with first-party, app-only tokens have no matching
+// service principal sign-in row - use kind=leftouter to keep them.

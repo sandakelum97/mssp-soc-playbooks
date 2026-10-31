@@ -1,0 +1,27 @@
+// Title:   Device code flow sign-ins (device code phishing check)
+// Purpose: Lists sign-ins that used the OAuth device code grant. Attackers
+//          abuse it by sending victims a code to enter at the Microsoft device
+//          login page, then reuse the issued tokens. Non-interactive refreshes
+//          from such a session may no longer show deviceCode as the protocol,
+//          so OriginalTransferMethod is also checked. Use the output to scope a
+//          Conditional Access "Authentication flows -> Device code flow" block.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  SigninLogs, AADNonInteractiveUserSignInLogs
+// MITRE:   T1528 - Steal Application Access Token, T1566.002 - Spearphishing Link
+// Ref:     https://learn.microsoft.com/entra/identity/conditional-access/concept-authentication-flows
+
+let lookback = 14d;  // <-- adjust
+union isfuzzy=true
+    (SigninLogs | where TimeGenerated > ago(lookback) | extend SignInType = "Interactive"),
+    (AADNonInteractiveUserSignInLogs | where TimeGenerated > ago(lookback) | extend SignInType = "NonInteractive")
+| extend OriginalTransferMethod = tostring(column_ifexists("OriginalTransferMethod", ""))
+| where AuthenticationProtocol =~ "deviceCode"
+     or OriginalTransferMethod has "deviceCode"
+| summarize SignIns   = count(),
+            Successes = countif(ResultType == "0"),
+            IPs       = make_set(IPAddress, 20),
+            Resources = make_set(ResourceDisplayName, 20),
+            FirstSeen = min(TimeGenerated),
+            LastSeen  = max(TimeGenerated)
+        by UserPrincipalName, AppDisplayName, SignInType
+| order by Successes desc, LastSeen desc

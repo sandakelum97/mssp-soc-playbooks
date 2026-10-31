@@ -7,10 +7,8 @@
 
 DeviceProcessEvents
 | where FileName =~ "rundll32.exe"
-| where not(FolderPath has_any (
-    @"C:\Windows\System32",
-    @"C:\Windows\SysWOW64"
-  ))
+| where not(FolderPath startswith @"C:\Windows\System32"
+    or FolderPath startswith @"C:\Windows\SysWOW64")  // startswith is case-insensitive
 | project Timestamp, DeviceName, AccountName,
           FolderPath, ProcessCommandLine
 | order by Timestamp desc

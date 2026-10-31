@@ -13,8 +13,9 @@ SigninLogs
     "User Three"         // <-- replace
   )
 | where RiskLevelDuringSignIn == "high"
-    or isnotempty(RiskEventTypes_V2)
+    or RiskEventTypes_V2 !in ("", "[]")  // string column; empty list = "[]"
 | project TimeGenerated, UserDisplayName, IPAddress,
           AppDisplayName, UserAgent, ConditionalAccessStatus,
-          RiskLevelDuringSignIn, RiskLevelAggregated
+          RiskLevelDuringSignIn, RiskLevelAggregated,
+          RiskEventTypes_V2
 | order by TimeGenerated desc

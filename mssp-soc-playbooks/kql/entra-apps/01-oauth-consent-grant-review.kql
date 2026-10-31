@@ -1,0 +1,35 @@
+// Title:   OAuth consent grants - illicit consent / consent phishing review
+// Purpose: Lists "Consent to application" audit events with who consented,
+//          from where, admin vs. user consent, and the permissions granted.
+//          Flags high-risk delegated scopes called out in the Microsoft
+//          App Consent Grant incident response playbook.
+// Env:     Microsoft Sentinel / Log Analytics (also works in Defender XDR
+//          advanced hunting when the Sentinel workspace is onboarded)
+// Tables:  AuditLogs
+// MITRE:   T1528 - Steal Application Access Token
+// Ref:     https://learn.microsoft.com/security/operations/incident-response-playbook-app-consent
+
+let lookback = 30d;  // <-- adjust
+let highRiskScopes = dynamic([
+    "Mail.", "Contacts.", "MailboxSettings.", "People.", "Files.", "Notes.",
+    "Directory.AccessAsUser.All", "user_impersonation",
+    "Application.ReadWrite.All", "Directory.ReadWrite.All",
+    "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory",
+    "User.ReadWrite.All", "User.ManageCreds.All"
+]);
+AuditLogs
+| where TimeGenerated > ago(lookback)
+| where OperationName == "Consent to application"
+| extend Actor    = tostring(InitiatedBy.user.userPrincipalName),
+         ActorIP  = tostring(InitiatedBy.user.ipAddress),
+         AppName  = tostring(TargetResources[0].displayName),
+         AppSpId  = tostring(TargetResources[0].id)
+| mv-apply mp = TargetResources[0].modifiedProperties on (
+    summarize Props = make_bag(bag_pack(tostring(mp.displayName), tostring(mp.newValue)))
+  )
+| extend IsAdminConsent = tostring(Props["ConsentContext.IsAdminConsent"]) has "True",
+         Permissions    = tostring(Props["ConsentAction.Permissions"])
+| extend HighRiskScope  = Permissions has_any (highRiskScopes)
+| project TimeGenerated, Actor, ActorIP, AppName, AppSpId,
+          IsAdminConsent, HighRiskScope, Permissions, Result, CorrelationId
+| order by HighRiskScope desc, TimeGenerated desc

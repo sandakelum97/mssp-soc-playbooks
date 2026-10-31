@@ -9,6 +9,10 @@
 DeviceProcessEvents
 | where FileName =~ "rundll32.exe"
 | where ProcessCommandLine matches regex @"\.(rfg|dat|cfg|tmp|log|txt)[\"",]"
-| where FolderPath !has @"C:\Windows"
-| project Timestamp, DeviceName, AccountName,
+// Exclude payloads loaded from the Windows directory (checks the command line,
+// not FolderPath - FolderPath is rundll32's own location, normally System32)
+| where ProcessCommandLine !has @"\Windows\System32\"
+    and ProcessCommandLine !has @"\Windows\SysWOW64\"
+| project Timestamp, DeviceName, AccountName, FolderPath,
           ProcessCommandLine, InitiatingProcessFileName
+| order by Timestamp desc

@@ -1,0 +1,39 @@
+// Title:   Mailbox forwarding and suspicious inbox rule parameters (BEC)
+// Purpose: Extracts the parameters of mailbox forwarding (Set-Mailbox) and
+//          inbox/transport rule changes so analysts can see *what* the rule
+//          does: external forwarding/redirect, delete, move to obscure folders
+//          (RSS Subscriptions, Notes, Junk Email, Archive) or keyword filters
+//          (invoice, payment, wire...). Broader than cloud-apps/01 and works
+//          tenant-wide.
+//          Note: rules created in Outlook desktop are logged as UpdateInboxRules
+//          with a different RawEventData layout - review those rows manually.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  CloudAppEvents
+// MITRE:   T1114.003 - Email Forwarding Rule, T1564.008 - Hide Artifacts: Email Hiding Rules
+// Ref:     https://learn.microsoft.com/defender-xdr/alert-grading-playbook-email-forwarding
+
+let actionTypes = dynamic(["New-InboxRule", "Set-InboxRule", "UpdateInboxRules",
+                           "Set-Mailbox", "New-TransportRule", "Set-TransportRule"]);
+let interesting = dynamic(["ForwardingSmtpAddress", "ForwardingAddress",
+                           "DeliverToMailboxAndForward", "ForwardTo",
+                           "ForwardAsAttachmentTo", "RedirectTo", "DeleteMessage",
+                           "PermanentDelete", "SoftDeleteMessage", "MarkAsRead",
+                           "MoveToFolder", "StopProcessingRules",
+                           "SubjectContainsWords", "BodyContainsWords",
+                           "SubjectOrBodyContainsWords", "From", "Name"]);
+CloudAppEvents
+| where Timestamp > ago(14d)  // <-- adjust
+| where ActionType in (actionTypes)
+| extend Params = RawEventData.Parameters
+| mv-apply p = Params on (
+    where tostring(p.Name) in (interesting)
+    | summarize RuleParams = make_bag(bag_pack(tostring(p.Name), tostring(p.Value)))
+  )
+| where ActionType == "UpdateInboxRules" or array_length(bag_keys(RuleParams)) > 0
+| extend Forwards = isnotempty(RuleParams.ForwardingSmtpAddress) or isnotempty(RuleParams.ForwardTo)
+                    or isnotempty(RuleParams.RedirectTo) or isnotempty(RuleParams.ForwardAsAttachmentTo),
+         Hides    = RuleParams.DeleteMessage =~ "True" or RuleParams.MarkAsRead =~ "True"
+                    or tostring(RuleParams.MoveToFolder) has_any ("RSS", "Notes", "Junk", "Archive", "Conversation History")
+| project Timestamp, AccountDisplayName, AccountObjectId, IPAddress, CountryCode,
+          ActionType, Forwards, Hides, RuleParams, ObjectName
+| order by Timestamp desc
