@@ -32,7 +32,8 @@ CloudAppEvents
 | where ActionType == "UpdateInboxRules" or array_length(bag_keys(RuleParams)) > 0
 | extend Forwards = isnotempty(RuleParams.ForwardingSmtpAddress) or isnotempty(RuleParams.ForwardTo)
                     or isnotempty(RuleParams.RedirectTo) or isnotempty(RuleParams.ForwardAsAttachmentTo),
-         Hides    = RuleParams.DeleteMessage =~ "True" or RuleParams.MarkAsRead =~ "True"
+         Hides    = tostring(RuleParams.DeleteMessage) =~ "True" or tostring(RuleParams.PermanentDelete) =~ "True"
+                    or tostring(RuleParams.SoftDeleteMessage) =~ "True" or tostring(RuleParams.MarkAsRead) =~ "True"
                     or tostring(RuleParams.MoveToFolder) has_any ("RSS", "Notes", "Junk", "Archive", "Conversation History")
 | project Timestamp, AccountDisplayName, AccountObjectId, IPAddress, CountryCode,
           ActionType, Forwards, Hides, RuleParams, ObjectName

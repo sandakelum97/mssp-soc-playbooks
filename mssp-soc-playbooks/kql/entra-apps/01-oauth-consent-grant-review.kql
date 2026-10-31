@@ -10,8 +10,9 @@
 // Ref:     https://learn.microsoft.com/security/operations/incident-response-playbook-app-consent
 
 let lookback = 30d;  // <-- adjust
+// Scope families (Mail.*, Contacts.*, MailboxSettings.*, People.*, Files.*, Notes.*)
+// are matched by regex below; Mail.ReadBasic is excluded per Microsoft guidance.
 let highRiskScopes = dynamic([
-    "Mail.", "Contacts.", "MailboxSettings.", "People.", "Files.", "Notes.",
     "Directory.AccessAsUser.All", "user_impersonation",
     "Application.ReadWrite.All", "Directory.ReadWrite.All",
     "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory",
@@ -30,6 +31,8 @@ AuditLogs
 | extend IsAdminConsent = tostring(Props["ConsentContext.IsAdminConsent"]) has "True",
          Permissions    = tostring(Props["ConsentAction.Permissions"])
 | extend HighRiskScope  = Permissions has_any (highRiskScopes)
+                         or replace_string(Permissions, "Mail.ReadBasic", "") matches regex
+                            @"(?i)\b(Mail|Contacts|MailboxSettings|People|Files|Notes)\.\w+"
 | project TimeGenerated, Actor, ActorIP, AppName, AppSpId,
           IsAdminConsent, HighRiskScope, Permissions, Result, CorrelationId
 | order by HighRiskScope desc, TimeGenerated desc

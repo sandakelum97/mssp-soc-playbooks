@@ -25,6 +25,9 @@ AuditLogs
           AdditionalDetails, ActorIP, Result  // method details are in AdditionalDetails
 | join kind=inner risk on UPN
 | where RegTime between (RiskTime .. (RiskTime + window))
+// one row per registration: keep the closest preceding risk event
+| extend Gap = RegTime - RiskTime
+| summarize arg_min(Gap, *) by UPN, RegTime, OperationName
 | project RiskTime, RegTime, UPN, RiskEventType, RiskLevel, RiskIP,
           OperationName, ResultReason, AdditionalDetails,
           ActorIP, SameIP = (RiskIP == ActorIP)

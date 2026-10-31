@@ -16,7 +16,7 @@ union isfuzzy=true
     (AADNonInteractiveUserSignInLogs | where TimeGenerated > ago(lookback) | extend SignInType = "NonInteractive")
 | extend OriginalTransferMethod = tostring(column_ifexists("OriginalTransferMethod", ""))
 | where AuthenticationProtocol =~ "deviceCode"
-     or OriginalTransferMethod has "deviceCode"
+     or OriginalTransferMethod =~ "deviceCodeFlow"  // values: none, deviceCodeFlow, authenticationTransfer
 | summarize SignIns   = count(),
             Successes = countif(ResultType == "0"),
             IPs       = make_set(IPAddress, 20),

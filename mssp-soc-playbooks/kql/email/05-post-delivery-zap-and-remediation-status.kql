@@ -11,6 +11,7 @@
 let campaign = EmailEvents
 | where Timestamp > ago(7d)  // <-- adjust
 | where SenderFromAddress =~ "sender@attacker-domain.com"  // <-- replace (or Subject / NetworkMessageId)
+| where DeliveryAction == "Delivered"  // only copies that reached a mailbox can need clean-up
 | project NetworkMessageId, RecipientEmailAddress, Subject,
           DeliveryTime = Timestamp, DeliveryAction, DeliveryLocation,
           LatestDeliveryAction, LatestDeliveryLocation;
@@ -22,7 +23,10 @@ campaign
     | project NetworkMessageId, RecipientEmailAddress, PostActionTime = Timestamp,
               ActionType, ActionTrigger, Action, ActionResult
   ) on NetworkMessageId, RecipientEmailAddress
-| extend StillNeedsAction = isempty(ActionType) or ActionResult != "Success"
+// keep only the most recent post-delivery action per message copy
+| summarize arg_max(PostActionTime, *) by NetworkMessageId, RecipientEmailAddress
+| extend AlreadyGone = LatestDeliveryLocation in ("Quarantine", "Deleted items", "Dropped")
+| extend StillNeedsAction = not(AlreadyGone) and (isempty(ActionType) or ActionResult != "Success")
 | project DeliveryTime, RecipientEmailAddress, Subject, DeliveryAction,
           DeliveryLocation, LatestDeliveryLocation, PostActionTime,
           ActionType, ActionTrigger, ActionResult, StillNeedsAction, NetworkMessageId

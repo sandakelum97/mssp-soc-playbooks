@@ -9,7 +9,8 @@
 
 DeviceNetworkEvents
 // RemoteUrl usually holds only the FQDN for HTTPS traffic (no path), so match the host.
-| where RemoteUrl has "login.live.com"  // <-- adjust if needed
+| where RemoteUrl has_any ("login.microsoftonline.com", "login.live.com")  // <-- adjust if needed
+// Expect legitimate bursts from Teams/Outlook/OneDrive - tune the exclusion list below.
 | where InitiatingProcessFileName !in~ (
     "svchost.exe", "lsass.exe", "msedge.exe",   // msedge.exe = Chromium Edge
     "MicrosoftEdge.exe", "chrome.exe", "firefox.exe"  // <-- tune per estate

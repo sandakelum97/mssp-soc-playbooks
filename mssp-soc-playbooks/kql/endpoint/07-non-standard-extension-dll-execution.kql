@@ -4,15 +4,12 @@
 //          files and evade extension-based detection.
 // Env:     Microsoft Defender XDR - Advanced Hunting
 // Tables:  DeviceProcessEvents
-// MITRE:   T1218.011 - Rundll32, T1036.007 - Masquerading: Double File Extension
-
-DeviceProcessEvents
 | where FileName =~ "rundll32.exe"
-| where ProcessCommandLine matches regex @"\.(rfg|dat|cfg|tmp|log|txt)[\"",]"
-// Exclude payloads loaded from the Windows directory (checks the command line,
-// not FolderPath - FolderPath is rundll32's own location, normally System32)
-| where ProcessCommandLine !has @"\Windows\System32\"
-    and ProcessCommandLine !has @"\Windows\SysWOW64\"
-| project Timestamp, DeviceName, AccountName, FolderPath,
+| where ProcessCommandLine matches regex @"(?i)\.(rfg|dat|cfg|tmp|log|txt)([\"", ]|$)"
+// Extract the first argument (the payload rundll32 loads) and exclude payloads
+// under C:\Windows. FolderPath can't be used - it is rundll32's own location.
+| extend Payload = extract(@"(?i)rundll32(?:\.exe)?""?\s+""?([^,""]+)", 1, ProcessCommandLine)
+| where isnotempty(Payload) and not(Payload startswith @"C:\Windows\")
+| project Timestamp, DeviceName, AccountName, Payload,
           ProcessCommandLine, InitiatingProcessFileName
 | order by Timestamp desc

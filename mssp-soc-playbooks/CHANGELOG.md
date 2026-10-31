@@ -36,8 +36,18 @@ Every change below was checked against the current Microsoft Learn schema refere
 - `email/04` — `DeliveredAsSpam` is not a valid `DeliveryAction` value (`Delivered`, `Junked`, `Blocked`, `Replaced`); added latest delivery columns.
 - `endpoint/04` — path check switched to `startswith`.
 - `endpoint/06` — `DeviceNetworkEvents` has no `AccountName` column; now `InitiatingProcessAccountName`; public-IP filter tightened.
-- `endpoint/07` — `FolderPath !has C:\Windows` excluded rundll32 itself (which lives in System32), so the query missed the attack; now checks the command line.
-- `endpoint/10` — `RemoteUrl` normally holds only the host for HTTPS, so the path match never hit; Chromium Edge is `msedge.exe`; header corrected (connections, not POSTs).
+- `endpoint/07` — `FolderPath !has C:\Windows` excluded rundll32 itself (which lives in System32), so the query missed the attack; now extracts the payload path from the command line and excludes only payloads under `C:\Windows`; extension regex also matches space / end of line.
+- `endpoint/02` — only successful logons (`ActionType == "LogonSuccess"`) count as "last logon".
+- `email/03` — explicit `kind=inner` join (default `innerunique` kept one random email per account), phish as well as malware, case-insensitive account match.
+- `email/04` — case-insensitive recipient match (`in~`).
+- `endpoint/10` — `RemoteUrl` normally holds only the host for HTTPS, so the path match never hit; now covers `login.microsoftonline.com` and `login.live.com`; Chromium Edge is `msedge.exe`; header corrected (connections, not POSTs).
+
+### Review pass (independent check of all queries)
+- `identity/09` — `OriginalTransferMethod` value is `deviceCodeFlow`; whole-term `has "deviceCode"` never matched.
+- `cloud-apps/03` — dynamic values cast with `tostring()` before comparison; `PermanentDelete` / `SoftDeleteMessage` now counted as hiding actions.
+- `email/05` — only delivered copies, latest post-delivery action per copy, and copies already in Quarantine / Deleted items / Dropped treated as removed.
+- `identity/10` — one row per registration (closest preceding risk event).
+- `entra-apps/01` — high-risk scope families matched by regex (excluding `Mail.ReadBasic`).
 
 ### Documentation
 - README: playbook index, new query tables, expanded MITRE map, schema notes, contributing checklist; root README kept in sync.

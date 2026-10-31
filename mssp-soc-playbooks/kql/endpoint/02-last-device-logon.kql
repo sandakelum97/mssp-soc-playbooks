@@ -8,6 +8,7 @@
 
 DeviceLogonEvents
 | where DeviceName =~ "DEVICE-HOSTNAME"  // <-- replace
+| where ActionType == "LogonSuccess"
 | where LogonType in (
     "Interactive", "RemoteInteractive", "Unlock"
   )
