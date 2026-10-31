@@ -3,6 +3,7 @@
 //          purge (ZAP) or analyst remediation (Threat Explorer / AIR approval)
 //          removed each delivered copy, and surfaces copies where the action
 //          failed or never happened - those still need manual clean-up.
+//          Junked copies are included: they still sit in the Junk Email folder.
 // Env:     Microsoft Defender XDR - Advanced Hunting
 // Tables:  EmailEvents, EmailPostDeliveryEvents
 // MITRE:   T1566 - Phishing
@@ -11,7 +12,7 @@
 let campaign = EmailEvents
 | where Timestamp > ago(7d)  // <-- adjust
 | where SenderFromAddress =~ "sender@attacker-domain.com"  // <-- replace (or Subject / NetworkMessageId)
-| where DeliveryAction == "Delivered"  // only copies that reached a mailbox can need clean-up
+| where DeliveryAction in ("Delivered", "Junked")  // copies in Inbox/folder or Junk can need clean-up
 | project NetworkMessageId, RecipientEmailAddress, Subject,
           DeliveryTime = Timestamp, DeliveryAction, DeliveryLocation,
           LatestDeliveryAction, LatestDeliveryLocation;

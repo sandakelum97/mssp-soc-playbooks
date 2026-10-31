@@ -2,6 +2,11 @@
 
 All notable changes to this repository. Dates are UTC.
 
+## 2026-10-31 — Codex review follow-up (PR #1)
+
+- `PB-01`, `PB-04` — forwarding removal now clears **both** `ForwardingAddress` (internal) and `ForwardingSmtpAddress`, with a `Get-Mailbox` verification step. Clearing only the SMTP property could leave internal forwarding active.
+- `email/05` — includes `Junked` copies (they remain in the Junk Email folder and may still need removal).
+
 ## 2026-10-31 — Microsoft Learn alignment update
 
 Every change below was checked against the current Microsoft Learn schema references and incident response guidance (links are in each file's `Ref` line and in the playbooks).

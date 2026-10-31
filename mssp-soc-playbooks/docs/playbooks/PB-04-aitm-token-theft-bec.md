@@ -63,7 +63,7 @@ Order matters — revoke **after** disabling, so the attacker can't refresh in b
 2. **Revoke all refresh tokens / session cookies**: `Revoke-MgUserSignInSession -UserId <id>` (Graph: `POST /users/{id}/revokeSignInSessions`) or *Revoke sessions* in the Entra admin center.
    - Access tokens remain valid until they expire (default about one hour). **Continuous Access Evaluation** (Exchange, SharePoint, Teams, Graph) acts on revocation, password change and account disable without waiting for token expiry — Microsoft states event propagation can take up to 15 minutes.
 3. **Reset the password** (twice for hybrid accounts).
-4. **Remove attacker persistence**: MFA methods they added (Graph `DELETE /users/{id}/authentication/...Methods/{id}`), registered devices (`Update-MgDevice -AccountEnabled:$false`), inbox rules (`Get-InboxRule -IncludeHidden` / `Remove-InboxRule`), forwarding (`Set-Mailbox -ForwardingSmtpAddress $null`), OAuth grants (PB-03).
+4. **Remove attacker persistence**: MFA methods they added (Graph `DELETE /users/{id}/authentication/...Methods/{id}`), registered devices (`Update-MgDevice -AccountEnabled:$false`), inbox rules (`Get-InboxRule -IncludeHidden` / `Remove-InboxRule`), forwarding (`Set-Mailbox -ForwardingAddress $null -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false` — clear both, then verify with `Get-Mailbox | Format-List Forwarding*`), OAuth grants (PB-03).
 5. **Confirm user compromised** in ID Protection; block attacker IPs/ASN with a Conditional Access named location (short-term).
 6. Re-enable the account once the user has re-registered MFA on a trusted device.
 
