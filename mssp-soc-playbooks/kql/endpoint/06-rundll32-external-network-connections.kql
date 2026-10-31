@@ -7,7 +7,7 @@
 
 DeviceNetworkEvents
 | where InitiatingProcessFileName =~ "rundll32.exe"
-| where RemoteIPType != "Private"
-| project Timestamp, DeviceName, AccountName,
+| where RemoteIPType == "Public"  // excludes Private, Loopback, Reserved, etc.
+| project Timestamp, DeviceName, InitiatingProcessAccountName,
           RemoteIP, RemoteUrl, InitiatingProcessCommandLine
 | order by Timestamp desc

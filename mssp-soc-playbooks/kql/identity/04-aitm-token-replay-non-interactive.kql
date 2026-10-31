@@ -13,7 +13,7 @@ AADNonInteractiveUserSignInLogs
     "User Two",   // <-- replace
     "User Three"  // <-- replace
   )
-| where ResultType == 0
+| where ResultType == "0"  // string column
 | project TimeGenerated, UserDisplayName, IPAddress,
           AppDisplayName, ResourceDisplayName,
           UserAgent, AuthenticationProtocol, OriginalRequestId

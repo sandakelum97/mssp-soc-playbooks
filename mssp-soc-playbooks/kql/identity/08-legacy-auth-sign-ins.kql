@@ -1,0 +1,24 @@
+// Title:   Legacy authentication sign-ins (MFA bypass surface)
+// Purpose: Lists sign-ins using legacy protocols (IMAP, POP, SMTP AUTH,
+//          Exchange ActiveSync, older Office clients). Legacy auth cannot
+//          perform MFA and is a common password-spray target. Use the output
+//          to scope a Conditional Access "block legacy authentication" policy.
+// Env:     Microsoft Sentinel / Log Analytics
+// Tables:  SigninLogs
+// MITRE:   T1078.004 - Valid Accounts: Cloud Accounts
+// Ref:     https://learn.microsoft.com/entra/identity/conditional-access/policy-block-legacy-authentication
+
+SigninLogs
+| where TimeGenerated > ago(7d)  // <-- adjust
+| where ClientAppUsed in (
+    "Exchange ActiveSync", "IMAP4", "POP3", "Authenticated SMTP",
+    "Exchange Web Services", "MAPI Over HTTP", "Offline Address Book",
+    "Outlook Anywhere (RPC over HTTP)", "Exchange Online PowerShell",
+    "AutoDiscover", "Other clients"
+  )
+| summarize Attempts = count(),
+            Successes = countif(ResultType == "0"),
+            IPs = make_set(IPAddress, 20),
+            LastSeen = max(TimeGenerated)
+        by UserPrincipalName, ClientAppUsed
+| order by Successes desc, Attempts desc

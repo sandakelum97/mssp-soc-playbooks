@@ -1,0 +1,33 @@
+// Title:   Post-delivery actions - ZAP and manual remediation status
+// Purpose: For a phishing/malware campaign, confirms whether Zero-hour auto
+//          purge (ZAP) or analyst remediation (Threat Explorer / AIR approval)
+//          removed each delivered copy, and surfaces copies where the action
+//          failed or never happened - those still need manual clean-up.
+// Env:     Microsoft Defender XDR - Advanced Hunting
+// Tables:  EmailEvents, EmailPostDeliveryEvents
+// MITRE:   T1566 - Phishing
+// Ref:     https://learn.microsoft.com/defender-xdr/advanced-hunting-emailpostdeliveryevents-table
+
+let campaign = EmailEvents
+| where Timestamp > ago(7d)  // <-- adjust
+| where SenderFromAddress =~ "sender@attacker-domain.com"  // <-- replace (or Subject / NetworkMessageId)
+| where DeliveryAction == "Delivered"  // only copies that reached a mailbox can need clean-up
+| project NetworkMessageId, RecipientEmailAddress, Subject,
+          DeliveryTime = Timestamp, DeliveryAction, DeliveryLocation,
+          LatestDeliveryAction, LatestDeliveryLocation;
+campaign
+| join kind=leftouter (
+    EmailPostDeliveryEvents
+    | where Timestamp > ago(7d)  // <-- keep aligned with the window above
+    // ActionType values: Manual remediation, Phish ZAP, Malware ZAP
+    | project NetworkMessageId, RecipientEmailAddress, PostActionTime = Timestamp,
+              ActionType, ActionTrigger, Action, ActionResult
+  ) on NetworkMessageId, RecipientEmailAddress
+// keep only the most recent post-delivery action per message copy
+| summarize arg_max(PostActionTime, *) by NetworkMessageId, RecipientEmailAddress
+| extend AlreadyGone = LatestDeliveryLocation in ("Quarantine", "Deleted items", "Dropped")
+| extend StillNeedsAction = not(AlreadyGone) and (isempty(ActionType) or ActionResult != "Success")
+| project DeliveryTime, RecipientEmailAddress, Subject, DeliveryAction,
+          DeliveryLocation, LatestDeliveryLocation, PostActionTime,
+          ActionType, ActionTrigger, ActionResult, StillNeedsAction, NetworkMessageId
+| order by StillNeedsAction desc, DeliveryTime asc

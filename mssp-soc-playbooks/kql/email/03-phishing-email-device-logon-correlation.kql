@@ -6,13 +6,17 @@
 // Tables:  EmailEvents, IdentityLogonEvents
 // MITRE:   T1566 - Phishing, T1078 - Valid Accounts
 
+let lookback = 7d;  // <-- adjust
 let MaliciousEmails = EmailEvents
-| where ThreatTypes has "Malware"
+| where Timestamp > ago(lookback)
+| where ThreatTypes has_any ("Phish", "Malware")
 | project TimeEmail = Timestamp, Subject, SenderFromAddress,
-          AccountName = tostring(split(RecipientEmailAddress, "@")[0]);
+          AccountName = tolower(tostring(split(RecipientEmailAddress, "@")[0]));
+// Note: assumes the mailbox local part matches the on-prem sAMAccountName.
 MaliciousEmails
-| join (
+| join kind=inner (
     IdentityLogonEvents
-    | project LogonTime = Timestamp, AccountName, DeviceName
+    | where Timestamp > ago(lookback)
+    | project LogonTime = Timestamp, AccountName = tolower(AccountName), DeviceName
   ) on AccountName
 | where (LogonTime - TimeEmail) between (0min .. 30min)

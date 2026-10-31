@@ -12,6 +12,8 @@ let riskyUserNames = dynamic([
 ]);
 IdentityInfo
 | where AccountDisplayName in~ (riskyUserNames)
-| take_any(*) by AccountObjectId
+| summarize take_any(*) by AccountObjectId
+// If Timestamp is available (MDI / MDA / MDE P2 tenants), prefer the latest row:
+// | summarize arg_max(Timestamp, *) by AccountObjectId
 | project AccountDisplayName, AccountUpn,
           IsAccountEnabled, AccountObjectId

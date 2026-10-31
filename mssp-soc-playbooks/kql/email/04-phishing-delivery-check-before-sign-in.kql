@@ -14,7 +14,9 @@ EmailEvents
 | where Timestamp between (
     datetime(YYYY-MM-DD) .. datetime(YYYY-MM-DD)  // <-- adjust window
   )
-| where RecipientEmailAddress in (victims)
-| where DeliveryAction in ("Delivered", "DeliveredAsSpam")
+| where RecipientEmailAddress in~ (victims)
+| where DeliveryAction in ("Delivered", "Junked")  // valid values: Delivered, Junked, Blocked, Replaced
 | project Timestamp, RecipientEmailAddress, SenderFromAddress,
-          Subject, DeliveryAction, ThreatTypes, NetworkMessageId
+          Subject, DeliveryAction, DeliveryLocation,
+          LatestDeliveryAction, LatestDeliveryLocation,
+          ThreatTypes, NetworkMessageId
