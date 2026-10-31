@@ -71,7 +71,9 @@ Get customer approval where the MSSP agreement requires it.
 
 ## 7. Eradication & recovery
 
-- Remove forwarding: `Set-Mailbox <identity> -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false`.
+- Remove forwarding — clear **both** properties: `ForwardingAddress` (internal recipient / mail contact) and `ForwardingSmtpAddress` (any SMTP address) are separate settings:
+  `Set-Mailbox <identity> -ForwardingAddress $null -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false`
+  Verify: `Get-Mailbox <identity> | Format-List ForwardingAddress,ForwardingSmtpAddress,DeliverToMailboxAndForward` — both addresses must be empty.
 - Remove malicious rules (`Remove-InboxRule`; use `Get-InboxRule -IncludeHidden` to see hidden rules).
 - Re-enable the account only after the above is complete and the user has re-registered MFA on a trusted device.
 - Notify recipients of any internal phishing sent from the account.
